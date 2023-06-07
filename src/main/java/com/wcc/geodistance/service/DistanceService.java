@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -20,31 +22,18 @@ public class DistanceService {
 
         log.info("Calculating distance between postal codes: {} and {}", postcode1, postcode2);
 
-        var postcodeEntity1 = postcodeRepository.findByPostcode(postcode1)
+        var postcodeEntities = postcodeRepository.findByPostcodeIn(List.of(postcode1,postcode2))
                 .orElseThrow(() -> new PostcodeNotFoundException("Postcode not found: " + postcode1)); //mapper
 
-        var postcodeEntity2 = postcodeRepository.findByPostcode(postcode2)
-                .orElseThrow(() -> new PostcodeNotFoundException("Postcode not found: " + postcode2));
-
-        double distance = calculateDistance(postcodeEntity1, postcodeEntity2);
-
-        var response = new DistanceResponse(
-                postcodeEntity1.getPostcode(), postcodeEntity1.getLatitude(), postcodeEntity1.getLongitude(),
-                postcodeEntity2.getPostcode(), postcodeEntity2.getLatitude(), postcodeEntity2.getLongitude(),
-                distance, "km");
-
+        double distance = calculateDistance(postcodeEntities);
         log.info("Distance calculated successfully between postal codes: {} and {}", postcode1, postcode2);
 
-        return response;
+        return createFromPostcodeEntities(postcodeEntities, distance);
     }
 
     public void updateCoordinates(String postcode, double latitude, double longitude) throws PostcodeNotFoundException {
         var entity = postcodeRepository.findByPostcode(postcode)
                 .orElseThrow(() -> new PostcodeNotFoundException("Postcode not found: " + postcode));
-
-        if (entity == null)
-            throw new PostcodeNotFoundException("Postcode not found in the database");
-
 
         entity.setLatitude(latitude);
         entity.setLongitude(longitude);
@@ -57,21 +46,17 @@ public class DistanceService {
         var entity = postcodeRepository.findByPostcode(postcode)
                 .orElseThrow(() -> new PostcodeNotFoundException("Postcode not found: " + postcode));
 
-        if (entity == null)
-            throw new PostcodeNotFoundException("Postcode not found in the database");
-
-
         postcodeRepository.delete(entity);
 
         log.info("Postal code deleted: {}", postcode);
     }
 
-    private double calculateDistance(PostcodeEntity postcodeEntity1, PostcodeEntity postcodeEntity2) {
+    private double calculateDistance(List<PostcodeEntity> postcodeEntities) {
         // Using Haversine formula
-        double lon1Radians = Math.toRadians(postcodeEntity1.getLongitude());
-        double lon2Radians = Math.toRadians(postcodeEntity2.getLongitude());
-        double lat1Radians = Math.toRadians(postcodeEntity1.getLatitude());
-        double lat2Radians = Math.toRadians(postcodeEntity2.getLatitude());
+        double lon1Radians = Math.toRadians(postcodeEntities.get(0).getLongitude());
+        double lon2Radians = Math.toRadians(postcodeEntities.get(1).getLongitude());
+        double lat1Radians = Math.toRadians(postcodeEntities.get(0).getLatitude());
+        double lat2Radians = Math.toRadians(postcodeEntities.get(1).getLatitude());
 
         double a = haversine(lat1Radians, lat2Radians)
                 + Math.cos(lat1Radians) * Math.cos(lat2Radians) * haversine(lon1Radians, lon2Radians);
@@ -87,5 +72,25 @@ public class DistanceService {
 
     private double square(double x) {
         return x * x;
+    }
+
+    public static DistanceResponse createFromPostcodeEntities(List<PostcodeEntity> postcodeEntities, double distance) {
+        if (postcodeEntities.size() < 2) {
+            throw new IllegalArgumentException("At least two postcode entities are required.");
+        }
+
+        PostcodeEntity entity1 = postcodeEntities.get(0);
+        PostcodeEntity entity2 = postcodeEntities.get(1);
+
+        return new DistanceResponse(
+                entity1.getPostcode(),
+                entity1.getLatitude(),
+                entity1.getLongitude(),
+                entity2.getPostcode(),
+                entity2.getLatitude(),
+                entity2.getLongitude(),
+                distance,
+                "km"
+        );
     }
 }

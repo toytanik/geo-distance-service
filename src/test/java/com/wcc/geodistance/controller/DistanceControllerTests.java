@@ -62,7 +62,7 @@ public class DistanceControllerTests {
 
     @Test
     public void testDeletePostalCode() throws PostcodeNotFoundException {
-        var expectedResponse = new ResponseEntity<>("Postal code deleted successfully", HttpStatus.OK);
+        var expectedResponse = new ResponseEntity<>("Postcode deleted successfully", HttpStatus.OK);
 
         var responseEntity = distanceController.deletePostCode("AB12 3CD");
 

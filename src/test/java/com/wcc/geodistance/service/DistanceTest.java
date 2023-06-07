@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,8 +38,7 @@ public class DistanceTest {
         var entity1 = new PostcodeEntity(1, "AB12 3CD", 57.1234, -2.3456);
         var entity2 = new PostcodeEntity(2, "XY34 5ZA", 54.9876, -1.2345);
 
-        when(postcodeRepository.findByPostcode("AB12 3CD")).thenReturn(Optional.of(entity1));
-        when(postcodeRepository.findByPostcode("XY34 5ZA")).thenReturn(Optional.of(entity2));
+        when(postcodeRepository.findByPostcodeIn(List.of("AB12 3CD","XY34 5ZA"))).thenReturn(Optional.of(List.of(entity1,entity2)));
 
         var responseEntity = distanceController.calculateDistance("AB12 3CD", "XY34 5ZA");
         var response = responseEntity.getBody();
@@ -52,8 +52,7 @@ public class DistanceTest {
         assert response.latitude2() == 54.9876;
         assert response.longitude2() == -1.2345;
 
-        verify(postcodeRepository, times(1)).findByPostcode("AB12 3CD");
-        verify(postcodeRepository, times(1)).findByPostcode("XY34 5ZA");
+        verify(postcodeRepository, times(1)).findByPostcodeIn(List.of("AB12 3CD", "XY34 5ZA"));
     }
 
     @Test
